@@ -83,7 +83,185 @@ def translate1():
     x = translator("Ce cours est produit par Hugging Face.")
     print(x)
 
+
+def auto_token():
+    import torch
+    from transformers import AutoTokenizer
+    from transformers import AutoModel
+    from transformers import AutoModelForSequenceClassification
+
+    checkpoint = "distilbert-base-uncased-finetuned-sst-2-english"
+    tokenizer = AutoTokenizer.from_pretrained(checkpoint)
+
+    raw_inputs = [
+        "I've been waiting for a HuggingFace course my whole life.",
+        "I hate this so much!",
+    ]
+    inputs = tokenizer(raw_inputs, padding=True, truncation=True, return_tensors="pt")
+
+    # model = AutoModel.from_pretrained(checkpoint)
+
+    model = AutoModelForSequenceClassification.from_pretrained(checkpoint)
+    outputs = model(**inputs)
+
+    predictions = torch.nn.functional.softmax(outputs.logits, dim=-1)
+    print(predictions)
+
+
+def auto_model():
+    from transformers import BertConfig, BertModel
+    from transformers import AutoTokenizer
+    # config = BertConfig()
+    # model = BertModel(config)
+    # model = BertModel.from_pretrained("bert-base-cased")
+    # model.save_pretrained("/tmp/hf-test")
+    # print(model)
+
+    tokenizer = AutoTokenizer.from_pretrained("bert-base-cased")
+    sequence = "Using a Transformer network is simple"
+    tokens = tokenizer.tokenize(sequence)
+    ids = tokenizer.convert_tokens_to_ids(tokens)
+
+    decoded_string = tokenizer.decode([7993, 170, 11303, 1200, 2443, 1110, 3014])
+    print(decoded_string)
+    # print(ids)
+
+def multiple_seq():
+    import torch
+    from transformers import AutoTokenizer, AutoModelForSequenceClassification
+
+    checkpoint = "distilbert-base-uncased-finetuned-sst-2-english"
+    tokenizer = AutoTokenizer.from_pretrained(checkpoint)
+    model = AutoModelForSequenceClassification.from_pretrained(checkpoint)
+
+    sequence = "I've been waiting for a HuggingFace course my whole life."
+    tokens = tokenizer.tokenize(sequence)
+    ids = tokenizer.convert_tokens_to_ids(tokens)
+    input_ids = torch.tensor([ids])
+    # print(input_ids)
+    # This line will fail.
+    # print(model(input_ids))
+
+    sequence1_ids = [[200, 200, 200]]
+    sequence2_ids = [[200, 200]]
+    batched_ids = [
+        [200, 200, 200],
+        [200, 200, tokenizer.pad_token_id],
+    ]
+
+    attention_mask = [
+        [1, 1, 1],
+        [1, 1, 0],
+    ]
+
+    outputs = model(torch.tensor(batched_ids), attention_mask=torch.tensor(attention_mask))
+    print(outputs.logits)
+
+    # print(model(torch.tensor(sequence1_ids)).logits)
+    # print(model(torch.tensor(sequence2_ids)).logits)
+    # print(model(torch.tensor(batched_ids)).logits)
+
+def auto_tokenizer():
+    from transformers import AutoTokenizer
+
+    checkpoint = "distilbert-base-uncased-finetuned-sst-2-english"
+    tokenizer = AutoTokenizer.from_pretrained(checkpoint)
+
+    sequences = ["I've been waiting for a HuggingFace course my whole life.", "So have I!"]
+
+    model_inputs = tokenizer(sequences, max_length=8, truncation=True)
+
+    # model_inputs = tokenizer(sequences)
+    print(model_inputs)
+
+
+def proc_data():
+
+    import torch
+    from transformers import AdamW, AutoTokenizer, AutoModelForSequenceClassification
+    from datasets import load_dataset
+    from transformers import AutoTokenizer
+    from transformers import DataCollatorWithPadding
+    # Same as before
+    # checkpoint = "bert-base-uncased"
+    # tokenizer = AutoTokenizer.from_pretrained(checkpoint)
+    # model = AutoModelForSequenceClassification.from_pretrained(checkpoint)
+    # sequences = [
+    #     "I've been waiting for a HuggingFace course my whole life.",
+    #     "This course is amazing!",
+    # ]
+    # batch = tokenizer(sequences, padding=True, truncation=True, return_tensors="pt")
+
+    # # This is new
+    # batch["labels"] = torch.tensor([1, 1])
+
+    # optimizer = AdamW(model.parameters())
+    # loss = model(**batch).loss
+    # loss.backward()
+    # optimizer.step()
+
+
+    raw_datasets = load_dataset("glue", "mrpc")
+    print(raw_datasets)
+
+    checkpoint = "bert-base-uncased"
+    tokenizer = AutoTokenizer.from_pretrained(checkpoint)
+    # tokenized_sentences_1 = tokenizer(raw_datasets["train"]["sentence1"])
+    # tokenized_sentences_2 = tokenizer(raw_datasets["train"]["sentence2"])
+    # print(tokenized_sentences_1)
+
+    # tokenized_dataset = tokenizer(
+    #     raw_datasets["train"]["sentence1"],
+    #     raw_datasets["train"]["sentence2"],
+    #     padding=True,
+    #     truncation=True,
+    # )
+    data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
+
+    def tokenize_function(example):
+        return tokenizer(example["sentence1"], example["sentence2"], truncation=True)
+
+    tokenized_datasets = raw_datasets.map(tokenize_function, batched=True)
+    print(tokenized_datasets)
+
+def trainer():
+    import torch
+    from datasets import load_dataset
+    from transformers import AutoTokenizer, DataCollatorWithPadding
+    from transformers import TrainingArguments
+    from transformers import AutoModelForSequenceClassification
+    from transformers import Trainer
+
+    raw_datasets = load_dataset("glue", "mrpc")
+    checkpoint = "bert-base-uncased"
+    tokenizer = AutoTokenizer.from_pretrained(checkpoint)
+
+
+    def tokenize_function(example):
+        return tokenizer(example["sentence1"], example["sentence2"], truncation=True)
+
+    tokenized_datasets = raw_datasets.map(tokenize_function, batched=True)
+    data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
+
+    training_args = TrainingArguments(output_dir="test-trainer", no_cuda=True)
+    # place_model_on_device=True
+
+    model = AutoModelForSequenceClassification.from_pretrained(checkpoint, num_labels=2)
+
+    # mps_device = torch.device("mps")
+    trainer = Trainer(
+        model,
+        training_args,
+        train_dataset=tokenized_datasets["train"],
+        eval_dataset=tokenized_datasets["validation"],
+        data_collator=data_collator,
+        tokenizer=tokenizer,
+    )
+    print(trainer)
+    trainer.train()
+    import ipdb; ipdb.set_trace()
+
 if __name__ == '__main__':
-    translate1()
+    trainer()
 
 
