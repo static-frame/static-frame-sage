@@ -37,22 +37,24 @@ if __name__ == '__main__':
     # see
     # https://huggingface.co/docs/datasets/en/loading
 
+    FEATURE = "text"
+
     # Example data for StaticFrame documentation
     doc_examples = [
-        {"text": "StaticFrame is an immutable dataframe library in Python."},
-        {"text": "StaticFrame allows for efficient manipulation of data with an emphasis on immutability."},
-        {"text": "To create a Frame from a dictionary: sf.Frame.from_dict({'a': [1, 2], 'b': [3, 4]})"}
+        {FEATURE: "StaticFrame is an immutable dataframe library in Python."},
+        {FEATURE: "StaticFrame allows for efficient manipulation of data with an emphasis on immutability."},
+        {FEATURE: "To create a Frame from a dictionary: sf.Frame.from_dict({'a': [1, 2], 'b': [3, 4]})"}
     ]
 
     # Example data for StaticFrame code examples
     code_examples = [
-        {"text": "import static_frame as sf\n"
+        {FEATURE: "import static_frame as sf\n"
                  "frame = sf.Frame.from_dict({'a': [1, 2], 'b': [3, 4]})\n"
                  "print(frame)"},
-        {"text": "import static_frame as sf\n"
+        {FEATURE: "import static_frame as sf\n"
                  "frame = sf.Frame(np.arange(6).reshape(3, 2), index=sf.IndexAutoFactory)\n"
                  "print(frame)"},
-        {"text": "import static_frame as sf\n"
+        {FEATURE: "import static_frame as sf\n"
                  "frame = sf.Frame.from_records([(1, 'a'), (2, 'b')], columns=('num', 'char'))\n"
                  "print(frame)"}
     ]
@@ -70,12 +72,13 @@ if __name__ == '__main__':
         'validation': split_datasets['test']
     })
 
+    # https://huggingface.co/blog/codellama
     checkpoint = "codellama/CodeLlama-7b-Python-hf"
     tokenizer = AutoTokenizer.from_pretrained(checkpoint)
     tokenizer.add_special_tokens({'pad_token': tokenizer.eos_token})
 
     def tokenize_function(examples):
-        return tokenizer(examples["text"], max_length=100, padding="max_length", truncation=True)
+        return tokenizer(examples[FEATURE], max_length=100, padding="max_length", truncation=True)
 
     # will process all splits and return a splitted result
     tokens = dataset_dict.map(tokenize_function, batched=True)
@@ -89,7 +92,7 @@ if __name__ == '__main__':
             output_dir="/tmp/results",
             per_device_train_batch_size=4,
             per_device_eval_batch_size=4,
-            num_train_epochs=1, # was 3
+            num_train_epochs=3, # was 3
             weight_decay=0.01,
             )
 
